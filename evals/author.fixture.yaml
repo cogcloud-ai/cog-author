@@ -1,0 +1,8 @@
+name: author
+bundle: examples/author-bundle.json
+expect:
+  error: false
+  parsed: true
+  abstained: false
+  classification: authored
+  grounded: true

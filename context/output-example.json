@@ -1,0 +1,90 @@
+{
+  "abstained": false,
+  "classification": "designed",
+  "reason": "",
+  "questions": [],
+  "assumptions": [
+    "The caller supplies text notes; audio transcription is outside scope."
+  ],
+  "contract": {
+    "purpose": "Extract action items explicitly stated in supplied notes.",
+    "user": "Meeting participant",
+    "supported_work": [
+      "Extract explicit actions with a verbatim supporting quote."
+    ],
+    "unsupported_work": [
+      "Invent owners or actions.",
+      "Execute actions."
+    ],
+    "input_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "notes": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "notes"
+      ]
+    },
+    "output_schema": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "abstained": {
+          "type": "boolean"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "action": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quote": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "action",
+              "quote"
+            ]
+          },
+          "minItems": 0
+        }
+      },
+      "required": [
+        "abstained",
+        "actions"
+      ]
+    },
+    "grounding": "Each quote must occur verbatim in notes.",
+    "abstention": "Return abstained true and no actions when no explicit action exists.",
+    "model_requirements": "OpenAI-compatible text generation with JSON output.",
+    "locality": "any",
+    "prohibits": [
+      "execute_actions",
+      "send_external_message"
+    ],
+    "acceptance_criteria": [
+      {
+        "id": "explicit-actions",
+        "description": "Extract explicit actions with verbatim quotes."
+      },
+      {
+        "id": "no-action",
+        "description": "Abstain when the notes contain no explicit action."
+      }
+    ]
+  },
+  "smith_request": null,
+  "files": []
+}

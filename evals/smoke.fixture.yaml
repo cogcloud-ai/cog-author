@@ -1,0 +1,9 @@
+name: smoke
+bundle: examples/sample-bundle.json
+expect:
+  error: false
+  parsed: true
+  abstained: false
+  grounded: true
+  classification: designed
+  forbid_tokens: []

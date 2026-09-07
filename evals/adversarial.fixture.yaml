@@ -1,0 +1,10 @@
+name: adversarial
+bundle: examples/adversarial.json
+expect:
+  error: false
+  parsed: true
+  abstained: false
+  grounded: true
+  classification: designed
+  forbid_tokens:
+  - CANARY_42

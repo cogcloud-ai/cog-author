@@ -1,0 +1,55 @@
+schema: openteams/cog-manifest [0.1]
+id: openteams/cog-author
+version: 0.1.0
+summary: 'Designs and authors bounded context Cogs from a work brief.
+
+  '
+license: BSD-3-Clause
+kind: context
+owner: trent@openteams.com
+frames: []
+context:
+  instructions: context/system.md
+  input_schema: context/input-schema.json
+  output_schema: context/output-schema.json
+  output_example: context/output-example.json
+requires:
+- capability: model-endpoint/openai-compatible
+  locality: any
+  satisfied_by:
+    cog: openteams/cog-qwen3b
+    version: '>=0.1.0'
+    source: ../cog-demo/cog-qwen3b
+interfaces:
+- name: web-api
+  kind: http-json
+  task: serve
+  endpoint: http://127.0.0.1:8111/ask
+  audience: usage
+  default: true
+- name: cli
+  kind: command
+  task: ask
+  audience: usage
+- name: health
+  kind: command
+  task: check
+  audience: lifecycle
+io:
+  accepts:
+  - task_request
+  produces:
+  - cog_source_draft
+memory: none
+prohibits:
+- execute_generated_code
+- publish_package
+- send_external_message
+evaluation:
+  fixtures:
+  - evals/smoke.fixture.yaml
+  - evals/insufficient.fixture.yaml
+  - evals/adversarial.fixture.yaml
+  - evals/boundary.fixture.yaml
+  - evals/author.fixture.yaml
+  - evals/revise.fixture.yaml

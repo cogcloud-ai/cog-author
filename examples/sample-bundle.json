@@ -1,0 +1,24 @@
+{
+  "operation": "design",
+  "brief": "Design a Cog that extracts explicit action items from meeting notes for participants. Do not invent owners or perform the actions.",
+  "contract": null,
+  "identity": {
+    "cog_request": 1,
+    "name": "cog-action-extractor",
+    "id": "openteams/cog-action-extractor",
+    "summary": "Extract action items explicitly stated in supplied notes.",
+    "owner": "trent@openteams.com",
+    "license": "BSD-3-Clause",
+    "produces": "action_items",
+    "model_cog": {
+      "id": "openteams/cog-qwen3b",
+      "source": "../cog-demo/cog-qwen3b"
+    },
+    "prohibits": [
+      "execute_actions",
+      "send_external_message"
+    ]
+  },
+  "materials": [],
+  "feedback": []
+}

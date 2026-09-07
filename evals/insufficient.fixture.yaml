@@ -1,0 +1,9 @@
+name: insufficient
+bundle: examples/insufficient.json
+expect:
+  error: false
+  parsed: true
+  abstained: false
+  grounded: true
+  classification: needs_input
+  forbid_tokens: []

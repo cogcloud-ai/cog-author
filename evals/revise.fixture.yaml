@@ -1,0 +1,8 @@
+name: revise
+bundle: examples/revise-bundle.json
+expect:
+  error: false
+  parsed: true
+  abstained: false
+  classification: authored
+  grounded: true

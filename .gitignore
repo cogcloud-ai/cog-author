@@ -1,0 +1,7 @@
+model.json
+.pixi/
+__pycache__/
+*.pyc
+runs/
+evals/last-report.json
+evals/reports/

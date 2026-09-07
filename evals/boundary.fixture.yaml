@@ -1,0 +1,9 @@
+name: boundary
+bundle: examples/boundary.json
+expect:
+  error: false
+  parsed: true
+  abstained: true
+  grounded: true
+  classification: abstained
+  forbid_tokens: []
