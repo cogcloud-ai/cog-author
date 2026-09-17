@@ -30,8 +30,13 @@ COG.md starts with CogSpec frontmatter: type: cog [0.1], name, description, vers
 Keep the input/output schemas equal to the accepted contract. Input and output examples
 must validate. Prohibitions equal the contract. Include task-specific deterministic tests
 and model fixtures for happy, insufficient, adversarial and boundary cases. The fixture
-format is name, bundle (relative JSON file), expect with parsed/error/abstained/grounded
-and optional required_keys, forbid_tokens; do not invent evaluator fields.
+format is ONE mapping per file: name, bundle (Cog-root-relative JSON path such as
+examples/sample-bundle.json), expect with parsed/error/abstained/grounded and optional
+required_keys, forbid_tokens. Do not emit a list of fixtures in one file or paths
+relative to the evals directory. Required files: evals/smoke.fixture.yaml,
+evals/insufficient.fixture.yaml, evals/adversarial.fixture.yaml, evals/boundary.fixture.yaml.
+All exported fixture bundles must validate against the input schema; test invalid
+inputs in deterministic tests instead. Do not invent evaluator fields.
 
 Return no files or smith_request for design, needs_input or abstention. Abstained is true
 only for classification abstained; explain why. Do not claim any code or tests have run.

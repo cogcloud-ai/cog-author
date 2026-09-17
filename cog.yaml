@@ -35,6 +35,14 @@ interfaces:
   kind: command
   task: check
   audience: lifecycle
+- name: composition
+  kind: command
+  task: composition
+  audience: lifecycle
+- name: export-draft
+  kind: command
+  task: export-draft
+  audience: lifecycle
 io:
   accepts:
   - task_request
@@ -53,3 +61,19 @@ evaluation:
   - evals/boundary.fixture.yaml
   - evals/author.fixture.yaml
   - evals/revise.fixture.yaml
+extensions:
+  workbench_composition:
+    contract: openteams/context-composition [0.1-draft]
+    bridge_interface: composition
+    accepted_compositions:
+    - harness
+    - model+harness
+    required_features:
+    - context/per-turn
+    - memory/none
+    - json-output
+    allowed_localities:
+    - cloud
+    tools: none
+    checks: packaged-before-and-after
+    evidence_scope: composed-system

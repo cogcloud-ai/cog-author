@@ -30,3 +30,9 @@ test = "python -m unittest discover -s tests -v"
 # silently pin the endpoint (cog-demo finding 2). Defaults live in the
 # machinery; model.json and COG_MODEL_* override them.
 
+
+[tasks.composition]
+cmd = "python scripts/context_bridge.py"
+
+[tasks.export-draft]
+cmd = "python scripts/export_draft.py"

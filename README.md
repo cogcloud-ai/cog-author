@@ -88,3 +88,13 @@ pixi run python ../cog-spec/tools/validate_cog.py .
 Only `src/task_logic.py` is author-owned under src. Other modules retain Smith's
 verified hashes. Results carry envelope v1; an ok result with problems requires
 the Op's Gate to decide whether to proceed.
+
+## Workbench suite integration
+
+The declared `composition` interface lets workbench prepare this Cog's packaged
+context and run its existing input/output checks around an external Harness-only
+or Model+Harness turn. It does not replace or modify Smith's src machinery.
+The `export-draft` interface exposes the existing validated source exporter as a
+declared lifecycle task. Workbench can transfer the complete source snapshot
+into a Smith package and retain the accepted contract and evaluation evidence.
+See sibling `cog-workbench/docs/tool-suite.md` for the goal-first workflow.
