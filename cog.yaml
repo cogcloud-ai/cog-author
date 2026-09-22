@@ -4,7 +4,7 @@ version: 0.1.0
 summary: 'Designs and authors bounded context Cogs from a work brief.
 
   '
-license: BSD-3-Clause
+license: Apache-2.0
 kind: context
 owner: trent@openteams.com
 frames: []

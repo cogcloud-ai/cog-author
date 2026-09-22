@@ -98,3 +98,10 @@ The `export-draft` interface exposes the existing validated source exporter as a
 declared lifecycle task. Workbench can transfer the complete source snapshot
 into a Smith package and retain the accepted contract and evaluation evidence.
 See sibling `cog-workbench/docs/tool-suite.md` for the goal-first workflow.
+
+## License
+
+Copyright 2026 OpenTeams. Licensed under the [Apache License 2.0](LICENSE).
+Third-party dependencies and external model services retain their own licenses
+and terms. Previously published BSD-3-Clause versions remain available under
+that license.
