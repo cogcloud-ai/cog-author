@@ -118,6 +118,14 @@
                 ]
               },
               "minItems": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "context",
+                "code"
+              ],
+              "description": "Omitted means legacy context; code currently supports pure work with no external reaches."
             }
           },
           "required": [
@@ -198,6 +206,13 @@
                 "minLength": 1
               },
               "minItems": 0
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "context",
+                "code"
+              ]
             }
           },
           "required": [
@@ -208,8 +223,33 @@
             "owner",
             "license",
             "produces",
-            "model_cog",
             "prohibits"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "code"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "not": {
+                  "required": [
+                    "model_cog"
+                  ]
+                }
+              },
+              "else": {
+                "required": [
+                  "model_cog"
+                ]
+              }
+            }
           ]
         },
         {
@@ -230,14 +270,57 @@
           "content": {
             "type": "string",
             "minLength": 1
+          },
+          "material_ref": {
+            "type": "string",
+            "minLength": 1
+          },
+          "material_sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           }
         },
         "required": [
-          "path",
-          "content"
+          "path"
+        ],
+        "oneOf": [
+          {
+            "required": [
+              "content"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "material_ref"
+                  ]
+                },
+                {
+                  "required": [
+                    "material_sha256"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "required": [
+              "material_ref",
+              "material_sha256"
+            ],
+            "not": {
+              "required": [
+                "content"
+              ]
+            }
+          }
         ]
       },
       "minItems": 0
+    },
+    "contract_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     }
   },
   "required": [

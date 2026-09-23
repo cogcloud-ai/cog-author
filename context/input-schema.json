@@ -99,6 +99,14 @@
                 ]
               },
               "minItems": 1
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "context",
+                "code"
+              ],
+              "description": "Omitted means legacy context; code currently supports pure work with no external reaches."
             }
           },
           "required": [
@@ -179,6 +187,13 @@
                 "minLength": 1
               },
               "minItems": 0
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "context",
+                "code"
+              ]
             }
           },
           "required": [
@@ -189,8 +204,33 @@
             "owner",
             "license",
             "produces",
-            "model_cog",
             "prohibits"
+          ],
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "kind": {
+                    "const": "code"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              },
+              "then": {
+                "not": {
+                  "required": [
+                    "model_cog"
+                  ]
+                }
+              },
+              "else": {
+                "required": [
+                  "model_cog"
+                ]
+              }
+            }
           ]
         },
         {
@@ -211,6 +251,10 @@
           "content": {
             "type": "string",
             "minLength": 1
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
           }
         },
         "required": [
@@ -227,6 +271,17 @@
         "minLength": 1
       },
       "minItems": 0
+    },
+    "kind": {
+      "type": "string",
+      "enum": [
+        "context",
+        "code"
+      ]
+    },
+    "contract_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
     }
   },
   "required": [

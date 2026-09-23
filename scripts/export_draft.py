@@ -9,6 +9,7 @@ import tempfile
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 import cog_core
+import task_logic
 import yaml
 
 
@@ -24,6 +25,7 @@ def export(request, envelope, destination):
     problems += cog_core.validate_output(payload, request)
     if problems or payload.get('classification') != 'authored':
         raise ValueError(f'Only a validated authored result can be exported: {problems}')
+    payload = task_logic.hydrate(payload, request)
     destination = Path(destination).absolute()
     if destination.exists() or destination.is_symlink():
         raise ValueError('Destination must not exist.')
@@ -36,17 +38,19 @@ def export(request, envelope, destination):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(content)
         smith = dict(payload['smith_request'])
+        kind = smith.pop('kind', 'context')
         smith.update(manifest='yaml', cog_md=files['COG.md'], context={
-            'system_md': files['context/system.md'],
             'input_schema': json.loads(files['context/input-schema.json']),
             'output_schema': json.loads(files['context/output-schema.json']),
             'output_example': json.loads(files['context/output-example.json'])},
-            examples={'sample_bundle': json.loads(files['examples/sample-bundle.json'])},
-            evals={'smoke_fixture': files['evals/smoke.fixture.yaml']})
+            examples={'sample_bundle': json.loads(files['examples/sample-bundle.json'])})
+        if kind == 'context':
+            smith['context']['system_md'] = files['context/system.md']
+            smith['evals'] = {'smoke_fixture': files['evals/smoke.fixture.yaml']}
         for path, value in {
             'smith-request.json': smith,
             'eval-plan.json': {'operation': 'plan', 'contract': payload['contract'], 'files': payload['files'], 'evidence': []},
-            'handoff.json': {'version': 1, 'contract': payload['contract'],
+            'handoff.json': {'version': 1, 'kind': kind, 'contract': payload['contract'],
                              'fixture_paths': sorted(p for p in files if p.endswith('.fixture.yaml')),
                              'source_paths': sorted(files),
                              'status': 'source-only-not-packaged-or-executed'},

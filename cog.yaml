@@ -1,10 +1,10 @@
 schema: openteams/cog-manifest [0.1]
 id: openteams/cog-author
 version: 0.1.0
-summary: 'Designs and authors bounded context Cogs from a work brief.
+summary: 'Designs and authors bounded context and pure code Cogs from a work brief.
 
   '
-license: BSD-3-Clause
+license: Apache-2.0
 kind: context
 owner: trent@openteams.com
 frames: []
@@ -43,6 +43,10 @@ interfaces:
   kind: command
   task: export-draft
   audience: lifecycle
+- name: composed-cli
+  kind: command
+  task: ask-composed
+  audience: usage
 io:
   accepts:
   - task_request

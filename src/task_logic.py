@@ -1,5 +1,6 @@
 """Author-owned design/source checks. Generated code is parsed, never executed."""
 import ast
+import hashlib
 import json
 import re
 from pathlib import PurePosixPath
@@ -13,6 +14,7 @@ REQUIRED_FILES = {
     'examples/sample-bundle.json', 'evals/smoke.fixture.yaml',
     'src/task_logic.py', 'tests/test_cog.py',
 }
+CODE_FILES = REQUIRED_FILES - {'context/system.md', 'evals/smoke.fixture.yaml'}
 
 
 def problem(detail):
@@ -25,6 +27,40 @@ def safe_path(path):
             and not PurePosixPath(path).is_absolute()
             and all(re.fullmatch(r'[A-Za-z0-9_][A-Za-z0-9_.-]*', p)
                     and p not in ('.', '..') for p in path.split('/')))
+
+
+def contract_digest(contract):
+    return hashlib.sha256(json.dumps(contract, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
+
+
+def hydrate(parsed, bundle):
+    """Expand explicit, hash-checked input references; never read local paths."""
+    result = dict(parsed)
+    if parsed.get('classification') == 'authored' and parsed.get('contract') is None:
+        contract = bundle.get('contract')
+        if not isinstance(contract, dict) or parsed.get('contract_sha256') != contract_digest(contract):
+            raise ValueError('Contract reference must match the accepted contract SHA-256.')
+        result['contract'] = contract
+    if 'contract_sha256' in parsed and parsed['contract_sha256'] != contract_digest(result.get('contract')):
+        raise ValueError('Contract SHA-256 mismatch.')
+    rows = []
+    for row in parsed.get('files', []):
+        if 'material_ref' not in row:
+            rows.append(row)
+            continue
+        path = row.get('path', '')
+        if 'content' in row or not safe_path(path) or not path.endswith('.json') or not path.startswith(('context/', 'tests/fixtures/')):
+            raise ValueError('Material references are only for JSON context/schema fixtures, never implementation code.')
+        matches = [m for m in bundle.get('materials', []) if m.get('path') == row['material_ref']]
+        if len(matches) != 1:
+            raise ValueError('Material reference must identify exactly one supplied material.')
+        content = matches[0]['content']
+        if hashlib.sha256(content.encode()).hexdigest() != row.get('material_sha256'):
+            raise ValueError('Material SHA-256 mismatch.')
+        json.loads(content)
+        rows.append({'path': path, 'content': content})
+    result['files'] = rows
+    return result
 
 
 def contract_problems(contract):
@@ -41,7 +77,7 @@ def contract_problems(contract):
         if isinstance(value, dict):
             try:
                 if value.get('type') != 'object':
-                    raise ValueError('Smith context tasks require object input and output schemas.')
+                    raise ValueError('Smith tasks require object input and output schemas.')
                 # Self-contained schemas: no remote reference retrieval during validation.
                 check_schema(value)
             except (ValueError, jsonschema.SchemaError) as exc:
@@ -65,6 +101,11 @@ def check_schema(value):
 
 def check_input(bundle):
     out = contract_problems(bundle.get('contract'))
+    contract = bundle.get('contract')
+    if 'contract_sha256' in bundle and (not isinstance(contract, dict) or bundle['contract_sha256'] != contract_digest(contract)):
+        out.append(problem('Input contract SHA-256 mismatch.'))
+    if isinstance(contract, dict) and bundle.get('kind', contract.get('kind', 'context')) != contract.get('kind', 'context'):
+        out.append(problem('Requested kind must match the accepted contract.'))
     if bundle.get('operation') in ('author', 'revise'):
         if not isinstance(bundle.get('contract'), dict) or not isinstance(bundle.get('identity'), dict):
             out.append(problem('author/revise requires an accepted contract and identity.'))
@@ -80,7 +121,14 @@ def render_input(bundle):
 def check_output(parsed, bundle):
     if not isinstance(parsed, dict):
         return [problem('Payload must be an object.')]
+    try:
+        parsed = hydrate(parsed, bundle)
+    except (ValueError, TypeError, KeyError) as exc:
+        return [problem(str(exc))]
     out = contract_problems(parsed.get('contract'))
+    contract = parsed.get('contract')
+    if isinstance(contract, dict) and bundle.get('kind', contract.get('kind', 'context')) != contract.get('kind', 'context'):
+        out.append(problem('Designed contract must preserve the requested kind.'))
     status = parsed.get('classification')
     if parsed.get('abstained') != (status == 'abstained'):
         out.append(problem('abstained must agree with classification.'))
@@ -107,6 +155,8 @@ def check_output(parsed, bundle):
     if request != bundle.get('identity') or not isinstance(request, dict):
         out.append(problem('Smith identity must match the supplied identity exactly.'))
     if isinstance(contract, dict) and isinstance(request, dict):
+        if request.get('kind', 'context') != contract.get('kind', 'context'):
+            out.append(problem('Smith identity kind must equal the accepted contract kind.'))
         if request.get('prohibits') != contract.get('prohibits'):
             out.append(problem('Identity prohibitions must equal the work contract.'))
         if not re.fullmatch(r'[a-z][a-z0-9]*(?:-[a-z0-9]+)*', str(request.get('name', ''))):
@@ -115,6 +165,8 @@ def check_output(parsed, bundle):
     if not isinstance(rows, list):
         return out + [problem('files must be an array.')]
     files = {}
+    code = isinstance(contract, dict) and contract.get('kind') == 'code'
+    required = CODE_FILES if code else REQUIRED_FILES
     normalized_paths = set()
     for row in rows:
         if not isinstance(row, dict):
@@ -136,13 +188,14 @@ def check_output(parsed, bundle):
                 tree = ast.parse(content, filename=path)
                 if path == 'src/task_logic.py':
                     functions = {n.name for n in tree.body if isinstance(n, ast.FunctionDef)}
-                    if not {'check_input', 'render_input', 'check_output'} <= functions:
+                    expected = {'check_input', 'run', 'check_output'} if code else {'check_input', 'render_input', 'check_output'}
+                    if not expected <= functions:
                         out.append(problem('task_logic.py must implement all three task functions.'))
                 if path.startswith('tests/') and not any(isinstance(n, ast.FunctionDef) and n.name.startswith('test_') for n in ast.walk(tree)):
                     out.append(problem(f'{path} has no test functions.'))
             except (SyntaxError, ValueError) as exc:
                 out.append(problem(f'{path}: invalid Python: {exc}'))
-    missing = REQUIRED_FILES - files.keys()
+    missing = required - files.keys()
     if missing:
         out.append(problem(f'Missing source files: {sorted(missing)}'))
         return out
@@ -163,7 +216,7 @@ def check_output(parsed, bundle):
                 if not isinstance(target, str) or target not in files:
                     raise ValueError(f'{path}: missing fixture bundle')
                 jsonschema.Draft202012Validator(ins).validate(json.loads(files[target]))
-        for label in ('insufficient', 'adversarial', 'boundary'):
+        for label in (() if code else ('insufficient', 'adversarial', 'boundary')):
             if f'evals/{label}.fixture.yaml' not in files:
                 out.append(problem(f'Missing evals/{label}.fixture.yaml.'))
         text = files['COG.md']

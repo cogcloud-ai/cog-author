@@ -5,3 +5,10 @@ __pycache__/
 runs/
 evals/last-report.json
 evals/reports/
+.op-composition.json
+# Local installation and execution state
+.DS_Store
+.env
+.env.*
+!.env.example
+var/

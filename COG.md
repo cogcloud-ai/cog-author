@@ -1,9 +1,9 @@
 ---
 type: cog [0.1]
 name: cog-author
-description: "Context Cog. Designs and authors bounded context Cogs from a work brief. Depends on a Cog providing an OpenAI-compatible model endpoint."
+description: "Context Cog. Designs and authors bounded context and pure code Cogs from a work brief. Depends on a Cog providing an OpenAI-compatible model endpoint."
 version: "0.1.0"
-license: BSD-3-Clause
+license: Apache-2.0
 publisher: OpenTeams
 manifest: cog.yaml
 manifest_schema: openteams/cog-manifest [0.1]
@@ -11,7 +11,7 @@ manifest_schema: openteams/cog-manifest [0.1]
 
 # Cog Author
 
-Designs and authors bounded context Cogs for a Builder Op. The consumer is the
+Designs and authors bounded context and pure code Cogs for a Builder Op. The consumer is the
 Op or a person building a Cog. Supports design, author and revise through the
 operation field of the declared ask entry point; HTTP uses the same contract.
 
@@ -31,7 +31,7 @@ also be transferred by the Builder Op. See README.md for the precise handoff.
 Out of scope: arbitrary runtimes, model training, dependency installation,
 execution, publication, orchestration and release approval. Unsupported work
 abstains with a reason; missing design facts produce questions. This v0 supports
-stdlib/pyyaml/jsonschema context tasks. It cannot prove generated code correct.
+stdlib/pyyaml/jsonschema context tasks and pure code tasks. It cannot prove generated code correct.
 
 ## Use and verification
 
@@ -46,3 +46,8 @@ may contain contract problems; the caller's Gate decides acceptance. Locality is
 declared in the manifest; the installed binding chooses a compatible model.
 The workspace-relative default satisfier is optional convenience, not a bundled
 model. Independent installations must supply their own model binding.
+
+The declared `ask-composed` usage task supports the same input through a
+separately activated Workbench composition. The local `.op-composition.json`
+installation record pins the consumer, provider revision and host; task input
+cannot choose a provider. See README.md. Native `ask` remains available.

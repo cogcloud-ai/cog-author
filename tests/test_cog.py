@@ -126,3 +126,70 @@ class AuthorChecks(unittest.TestCase):
             with self.assertRaises(ValueError): export(self.bundle, env, out)
             env['problems'] = [{'severity': 'error'}]
             with self.assertRaises(ValueError): export(self.bundle, env, Path(tmp)/'other')
+
+class CodeAuthorChecks(unittest.TestCase):
+    def setUp(self):
+        self.bundle=read('examples/code-author-bundle.json')
+        self.payload=read('examples/code-authored-payload.json')
+
+    def test_code_contract_and_source(self):
+        self.assertEqual(core.validate_input(self.bundle),[])
+        self.assertEqual(core.validate_output(self.payload,self.bundle),[])
+        self.payload['smith_request']['model_cog']={'id':'bad','source':'../bad'}
+        self.assertTrue(core.validate_output(self.payload,self.bundle))
+
+    def test_kind_cannot_change_or_omit_code_api(self):
+        self.payload['contract']['kind']='context'
+        self.assertTrue(core.validate_output(self.payload,self.bundle))
+        self.payload=read('examples/code-authored-payload.json')
+        next(f for f in self.payload['files'] if f['path']=='src/task_logic.py')['content']='def render_input(bundle): return ""'
+        self.assertTrue(core.validate_output(self.payload,self.bundle))
+
+    def test_export_code_needs_no_model_files(self):
+        import tempfile
+        sys.path.insert(0,str(ROOT/'scripts'))
+        from export_draft import export
+        env={'envelope':1,'cog':core.SELF_ID,'ok':True,'error':None,'problems':[],'payload':self.payload}
+        with tempfile.TemporaryDirectory() as tmp:
+            dest=export(self.bundle,env,Path(tmp)/'draft')
+            request=json.loads((dest/'smith-request.json').read_text())
+            self.assertNotIn('kind',request)
+            self.assertNotIn('model_cog',request)
+            self.assertNotIn('system_md',request['context'])
+            self.assertEqual(json.loads((dest/'handoff.json').read_text())['kind'],'code')
+
+class CompactSourceChecks(CodeAuthorChecks):
+    def compact(self):
+        import hashlib
+        self.bundle['contract_sha256']=logic.contract_digest(self.bundle['contract'])
+        self.payload['contract']=None
+        self.payload['contract_sha256']=self.bundle['contract_sha256']
+        row=next(f for f in self.payload['files'] if f['path']=='context/input-schema.json')
+        content=row.pop('content');sha=hashlib.sha256(content.encode()).hexdigest()
+        self.bundle['materials']=[{'path':'approved-input.json','content':content,'sha256':sha}]
+        row.update(material_ref='approved-input.json',material_sha256=sha)
+        return row
+
+    def test_compact_snapshot_expands_exactly(self):
+        expected=copy.deepcopy(self.payload)
+        self.compact()
+        self.assertEqual(core.validate_input(self.bundle),[])
+        self.assertEqual(core.validate_output(self.payload,self.bundle),[])
+        expanded=logic.hydrate(self.payload,self.bundle)
+        self.assertEqual(expanded['contract'],expected['contract'])
+        self.assertEqual(expanded['files'],expected['files'])
+        self.test_export_code_needs_no_model_files()
+
+    def test_reference_tampering_and_code_refs_refused(self):
+        row=self.compact()
+        row['material_sha256']='0'*64
+        self.assertTrue(core.validate_output(self.payload,self.bundle))
+        row['material_sha256']=self.bundle['materials'][0]['sha256']
+        row['path']='src/task_logic.py'
+        self.assertTrue(core.validate_output(self.payload,self.bundle))
+        row['path']='context/input-schema.json'
+        self.bundle['materials'].append(copy.deepcopy(self.bundle['materials'][0]))
+        self.assertTrue(core.validate_output(self.payload,self.bundle))
+        self.bundle['materials'].pop()
+        self.payload['contract_sha256']='0'*64
+        self.assertTrue(core.validate_output(self.payload,self.bundle))

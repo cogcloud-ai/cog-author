@@ -1,4 +1,5 @@
 [workspace]
+license = "Apache-2.0"
 name = "cog-author"
 version = "0.1.0"
 description = "Designs and authors bounded context Cogs from a work brief."
@@ -36,3 +37,6 @@ cmd = "python scripts/context_bridge.py"
 
 [tasks.export-draft]
 cmd = "python scripts/export_draft.py"
+
+[tasks.ask-composed]
+cmd = "python scripts/composed_usage.py"
