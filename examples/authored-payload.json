@@ -92,8 +92,8 @@
     "license": "BSD-3-Clause",
     "produces": "action_items",
     "model_cog": {
-      "id": "openteams/cog-qwen3b",
-      "source": "../cog-demo/cog-qwen3b"
+      "id": "openteams/cog-qwen",
+      "source": "../cog-qwen"
     },
     "prohibits": [
       "execute_actions",

@@ -17,9 +17,9 @@ requires:
 - capability: model-endpoint/openai-compatible
   locality: any
   satisfied_by:
-    cog: openteams/cog-qwen3b
+    cog: openteams/cog-qwen
     version: '>=0.1.0'
-    source: ../cog-demo/cog-qwen3b
+    source: ../cog-qwen
 interfaces:
 - name: web-api
   kind: http-json
@@ -77,6 +77,7 @@ extensions:
     - memory/none
     - json-output
     allowed_localities:
+    - local
     - cloud
     tools: none
     checks: packaged-before-and-after
