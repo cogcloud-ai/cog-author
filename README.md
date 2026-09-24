@@ -15,10 +15,10 @@ pixi run ask -- --bundle examples/sample-bundle.json
 pixi run ask -- --bundle examples/author-bundle.json
 ```
 
-The default model reference is relative to the CogLab workspace. Outside that
-workspace, supply a compatible model through `pixi run use -- --help` or resolve
-an available descriptor. A capable coding model is needed for useful authoring;
-successful installation or a passing mock test does not establish model quality.
+The default model reference in `cog.yaml` is a legacy sibling-checkout
+convenience and is not distributed with this Cog. Supply a compatible model
+through `pixi run use -- --help` or resolve an available descriptor. A capable
+coding model is needed for useful authoring; successful installation or a passing mock test does not establish model quality.
 
 ## Operations
 
@@ -82,7 +82,6 @@ Check the package from a sibling cog-smith checkout:
 
 ```sh
 pixi run python ../cog-smith/src/cogsmith_cli.py check . --tests
-pixi run python ../cog-spec/tools/validate_cog.py .
 ```
 
 Only `src/task_logic.py` is author-owned under src. Other modules retain Smith's
@@ -97,7 +96,7 @@ or Model+Harness turn. It does not replace or modify Smith's src machinery.
 The `export-draft` interface exposes the existing validated source exporter as a
 declared lifecycle task. Workbench can transfer the complete source snapshot
 into a Smith package and retain the accepted contract and evaluation evidence.
-See sibling `cog-workbench/docs/tool-suite.md` for the goal-first workflow.
+See the Workbench [tool-suite guide](https://github.com/cogcloud-ai/cog-workbench/blob/main/docs/tool-suite.md) for the goal-first workflow.
 
 ## Pure code authoring
 
@@ -107,7 +106,8 @@ binding with `suite activate-composition --context cog-author --binding-id ID
 with the same author input. Activation writes ignored `.op-composition.json`;
 the shared Op runtime includes it in the consumer fingerprint used for resume.
 Reactivation is required after consumer or host changes. The adapter is vendored
-from `cog-workbench/bridges/composed_usage.py`; native `ask` is unchanged.
+from cog-workbench's [`bridges/composed_usage.py`](https://github.com/cogcloud-ai/cog-workbench/blob/main/bridges/composed_usage.py);
+native `ask` is unchanged.
 
 Set request `kind: code`. The designed contract and author identity retain
 `kind: code`; omit `model_cog` from the identity. The current extension supports
