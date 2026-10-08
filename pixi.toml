@@ -40,3 +40,6 @@ cmd = "python scripts/export_draft.py"
 
 [tasks.ask-composed]
 cmd = "python scripts/composed_usage.py"
+
+[tasks.prepare-revision]
+cmd = "python scripts/prepare_revision.py"

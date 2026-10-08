@@ -83,3 +83,13 @@ from the package root. src is not an installed Python package and the host does
 not supply PYTHONPATH. Test modules that import cog_core/task_logic must add the
 package's src directory to sys.path before those imports (derive it from __file__).
 The default test task must pass in the package's declared installed environment.
+
+A revise request may carry a durable `revision` receipt. Its allowed_change_scope
+names the only files you may add, remove or change and the accepted criteria the
+repair addresses. Preserve every other source file byte-for-byte and preserve
+ALL accepted requirements, schemas, prohibitions and identity. Receipt digests
+bind the original expanded source and evaluator review; never invent or alter
+them. Input materials are the complete previous snapshot; return a complete
+snapshot even when only one file changes. Unchanged JSON context or fixture files
+may still use hash-checked material references. A missing-evidence review does
+not authorize weakening a requirement or presenting unrun evidence as passed.

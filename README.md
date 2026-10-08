@@ -142,3 +142,39 @@ that license.
 
 See the [suite guide](https://github.com/cogcloud-ai/cog-op-builder/blob/main/docs/repositories.md)
 for repository roles, supported setup, and current limitations.
+
+## Durable revision requests
+
+The declared `prepare-revision` lifecycle task turns saved author and evaluator
+artifacts into a request for the existing `revise` usage operation:
+
+```sh
+pixi run prepare-revision -- --request examples/revision-input.json
+```
+
+The input has `author_request`, its clean `author_envelope`, `review_request`, its
+clean `review_envelope`, and `allowed_change_scope` with explicit `paths` and
+accepted `criterion_ids`. Save the output envelope; its `payload.request` is the
+next author request. The task never invokes a model or executes source.
+
+[The receipt schema](contracts/revision.schema.json) specifies the stable
+`openteams/cog-revision [0.1]` format. The request contains the complete expanded
+source snapshot with per-file hashes, the exact accepted contract and its digest,
+the candidate fingerprint used by the evaluator, the original review request and
+envelope, and a digest binding both review documents. Fingerprints use UTF-8
+canonical JSON (sorted keys, compact separators, Unicode preserved); candidate
+files are sorted by path. No digest is supplied by the model. Feedback referring
+to another candidate/contract or evidence for another candidate is rejected.
+
+Only `revise` and `insufficient_evidence` reviews prepare this handoff. A missing
+evidence outcome normally means the coordinating Op should collect/review more
+evidence first; this task does not choose that lifecycle policy. An explicit
+repair may then use the same receipt. Revisions preserve the accepted contract,
+identity and every source file outside the allowed paths, including additions and
+deletions. Unchanged JSON schema/fixture material references are hydrated before
+fingerprinting and comparison. Receipt hashes correlate artifacts; they are not
+authenticated acceptance signatures. Contract redesign needs a new human Gate.
+
+Manual legacy revise requests remain supported. Automatic builder cycles should
+always use receipts. The composition adapter also supports Workbench's portable
+workspace-relative installations; reactivate after upgrading its source.

@@ -47,6 +47,10 @@ interfaces:
   kind: command
   task: ask-composed
   audience: usage
+- name: prepare-revision
+  kind: command
+  task: prepare-revision
+  audience: lifecycle
 io:
   accepts:
   - task_request
