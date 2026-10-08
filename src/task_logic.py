@@ -98,6 +98,8 @@ def prepare_revision(author_request, author_envelope, review_request, review_env
         raise ValueError('Revision requires an authored source snapshot.')
     files = payload['files']
     contract = payload['contract']
+    allowed_change_scope = dict(allowed_change_scope)
+    allowed_change_scope.setdefault('criterion_ids', [row['id'] for row in contract['acceptance_criteria']])
     result = {'operation': 'revise', 'brief': author_request['brief'], 'contract': contract,
               'contract_sha256': contract_digest(contract), 'identity': payload['smith_request'],
               'kind': contract.get('kind', 'context'),

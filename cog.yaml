@@ -50,7 +50,7 @@ interfaces:
 - name: prepare-revision
   kind: command
   task: prepare-revision
-  audience: lifecycle
+  audience: usage
 io:
   accepts:
   - task_request

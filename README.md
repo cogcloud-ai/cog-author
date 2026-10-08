@@ -145,7 +145,7 @@ for repository roles, supported setup, and current limitations.
 
 ## Durable revision requests
 
-The declared `prepare-revision` lifecycle task turns saved author and evaluator
+The declared `prepare-revision` deterministic usage task turns saved author and evaluator
 artifacts into a request for the existing `revise` usage operation:
 
 ```sh
@@ -154,7 +154,8 @@ pixi run prepare-revision -- --request examples/revision-input.json
 
 The input has `author_request`, its clean `author_envelope`, `review_request`, its
 clean `review_envelope`, and `allowed_change_scope` with explicit `paths` and
-accepted `criterion_ids`. Save the output envelope; its `payload.request` is the
+accepted `criterion_ids` (omission addresses all accepted criteria; the receipt
+always records the resolved IDs). Save the output envelope; its `payload.request` is the
 next author request. The task never invokes a model or executes source.
 
 [The receipt schema](contracts/revision.schema.json) specifies the stable
