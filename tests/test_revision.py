@@ -107,3 +107,12 @@ class RevisionTests(unittest.TestCase):
             envelope = json.loads(result.stdout)
             self.assertTrue(envelope['ok'])
             self.assertEqual(core.validate_input(envelope['payload']['request']), [])
+
+    def test_malformed_author_envelope_emits_invalid_revision_without_traceback(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path=Path(directory)/'request.json'
+            path.write_text(json.dumps({'author_request':self.original,'author_envelope':[],
+                'review_request':self.review_request,'review_envelope':self.review,'allowed_change_scope':self.scope}))
+            result=subprocess.run([sys.executable,str(ROOT/'scripts/prepare_revision.py'),'--request',str(path)],capture_output=True,text=True)
+            self.assertEqual(result.returncode,1);self.assertEqual(result.stderr,'')
+            self.assertEqual(json.loads(result.stdout)['error']['code'],'invalid-revision')
