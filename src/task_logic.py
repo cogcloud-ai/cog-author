@@ -79,7 +79,7 @@ def validate_revision(bundle):
         raise ValueError('Revision needs explicit, unique allowed-change paths.')
     if not ids or len(set(ids)) != len(ids) or not set(ids) <= criteria:
         raise ValueError('Revision scope must name existing accepted criterion IDs.')
-    if any(finding.get('path') not in paths for finding in result.get('findings', [])):
+    if any(finding.get('severity') == 'error' and finding.get('path') not in paths for finding in result.get('findings', [])):
         raise ValueError('Review findings fall outside the allowed-change paths.')
     if any(assessment.get('criterion_id') not in criteria for assessment in result.get('assessments', [])):
         raise ValueError('Review assessment names an unknown accepted criterion.')
@@ -105,7 +105,7 @@ def prepare_revision(author_request, author_envelope, review_request, review_env
               'kind': contract.get('kind', 'context'),
               'materials': [{'path': row['path'], 'content': row['content'],
                              'sha256': hashlib.sha256(row['content'].encode()).hexdigest()} for row in files],
-              'feedback': [json.dumps(review_envelope.get('payload'), sort_keys=True, ensure_ascii=False)],
+              'feedback': list(author_request.get('feedback', [])) + [json.dumps({'original_materials': author_request.get('materials', [])}, sort_keys=True, ensure_ascii=False), json.dumps(review_envelope.get('payload'), sort_keys=True, ensure_ascii=False)],
               'revision': {'schema': 'openteams/cog-revision [0.1]',
                            'accepted_contract_sha256': contract_digest(contract),
                            'candidate_sha256': candidate_digest(contract, files),

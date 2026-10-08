@@ -18,7 +18,7 @@ def main():
         request = task_logic.prepare_revision(**document)
         result = cog_core._envelope('prepare-revision', True, payload={'request': request}, binding={'source': 'deterministic-revision-handoff'})
         code = 0
-    except (ValueError, TypeError, KeyError, OSError) as exc:
+    except (ValueError, TypeError, KeyError, OSError, AttributeError) as exc:
         result = cog_core._fail('prepare-revision', 'invalid-revision', str(exc))
         code = 1
     print(json.dumps(result))

@@ -179,3 +179,10 @@ authenticated acceptance signatures. Contract redesign needs a new human Gate.
 Manual legacy revise requests remain supported. Automatic builder cycles should
 always use receipts. The composition adapter also supports Workbench's portable
 workspace-relative installations; reactivate after upgrading its source.
+
+Revision criterion IDs guide the requested repair; the mechanical scope is the
+allowed file paths and immutable accepted contract. Warning findings outside
+those paths do not prevent preparation. Error findings outside the scope refuse
+preparation; start a new build with a reviewed wider scope. Original supplied
+materials and feedback are retained in feedback alongside the prior source
+snapshot, including materials whose paths overlap generated source.

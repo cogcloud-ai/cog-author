@@ -63,6 +63,30 @@ class RevisionTests(unittest.TestCase):
         changed['contract']['acceptance_criteria'].pop()
         self.assertTrue(any('preserve' in p['detail'] for p in core.validate_output(changed, request)))
 
+    def test_out_of_scope_warning_does_not_block_but_error_does(self):
+        self.review['payload']['findings'] = [{'path': 'COG.md', 'severity': 'warning'}]
+        self.assertEqual(core.validate_input(self.prepare()), [])
+        self.review['payload']['findings'][0]['severity'] = 'error'
+        with self.assertRaisesRegex(ValueError, 'outside'):
+            self.prepare()
+
+    def test_original_materials_and_feedback_survive_revision(self):
+        self.original['materials'].append({'path': 'notes/spec.md', 'content': 'Original requirement'})
+        self.original['feedback'].append('Keep supplied requirements')
+        request = self.prepare()
+        self.assertIn('Keep supplied requirements', request['feedback'])
+        self.assertIn('notes/spec.md', ''.join(request['feedback']))
+
+    def test_out_of_scope_addition_and_removal_are_refused(self):
+        request = self.prepare()
+        for remove in (False, True):
+            changed = copy.deepcopy(self.source)
+            if remove:
+                changed['files'] = [r for r in changed['files'] if r['path'] != 'tests/test_cog.py']
+            else:
+                changed['files'].append({'path': 'notes/new.txt', 'content': 'new'})
+            self.assertTrue(any('outside' in p['detail'] for p in core.validate_output(changed, request)))
+
     def test_original_and_revised_material_references_are_hydrated_before_identity_checks(self):
         for row in self.author['payload']['files']:
             if row['path'].endswith('.json') and row['path'].startswith('context/'):
