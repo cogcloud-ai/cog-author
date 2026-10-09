@@ -142,3 +142,53 @@ that license.
 
 See the [suite guide](https://github.com/cogcloud-ai/cog-op-builder/blob/main/docs/repositories.md)
 for repository roles, supported setup, and current limitations.
+
+## Durable revision requests
+
+The declared `prepare-revision` deterministic usage task turns saved author and evaluator
+artifacts into a request for the existing `revise` usage operation:
+
+```sh
+pixi run prepare-revision -- --request examples/revision-input.json
+```
+
+The input has `author_request`, its clean `author_envelope`, `review_request`, its
+clean `review_envelope`, and `allowed_change_scope` with explicit `paths` and
+accepted `criterion_ids` (omission addresses all accepted criteria; the receipt
+always records the resolved IDs). Save the output envelope; its `payload.request` is the
+next author request. The task never invokes a model or executes source.
+
+[The receipt schema](contracts/revision.schema.json) specifies the stable
+`openteams/cog-revision [0.1]` format. The request contains the complete expanded
+source snapshot with per-file hashes, the exact accepted contract and its digest,
+the candidate fingerprint used by the evaluator, the original review request and
+envelope, and a digest binding both review documents. Fingerprints use UTF-8
+canonical JSON (sorted keys, compact separators, Unicode preserved); candidate
+files are sorted by path. No digest is supplied by the model. Feedback referring
+to another candidate/contract or evidence for another candidate is rejected.
+
+Only `revise` and `insufficient_evidence` reviews prepare this handoff. A missing
+evidence outcome normally means the coordinating Op should collect/review more
+evidence first; this task does not choose that lifecycle policy. An explicit
+repair may then use the same receipt. Revisions preserve the accepted contract,
+identity and every source file outside the allowed paths, including additions and
+deletions. Unchanged JSON schema/fixture material references are hydrated before
+fingerprinting and comparison. Receipt hashes correlate artifacts; they are not
+authenticated acceptance signatures. Contract redesign needs a new human Gate.
+
+Manual legacy revise requests remain supported. Automatic builder cycles should
+always use receipts. The composition adapter also supports Workbench's portable
+workspace-relative installations; reactivate after upgrading its source.
+
+Revision criterion IDs guide the requested repair; the mechanical scope is the
+allowed file paths and immutable accepted contract. Warning findings outside
+those paths do not prevent preparation. Error findings outside the scope refuse
+preparation; start a new build with a reviewed wider scope. Original supplied
+materials and feedback are retained in feedback alongside the prior source
+snapshot, including materials whose paths overlap generated source.
+
+Retained original materials and feedback are advisory context, outside the
+revision receipt digests. Chained revisions keep that original context once and
+replace the prior review advice with the current review; previous candidate
+source remains only in the current source snapshot. Unknown finding severities
+fail closed for paths outside the repair scope.

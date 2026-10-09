@@ -33,6 +33,101 @@ def contract_digest(contract):
     return hashlib.sha256(json.dumps(contract, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode()).hexdigest()
 
 
+def candidate_digest(contract, files):
+    """Same public fingerprint as the evaluator: expanded, path-sorted files."""
+    return contract_digest({'contract': contract, 'files': sorted(files, key=lambda row: row['path'])})
+
+
+def validate_revision(bundle):
+    """Bind feedback to one accepted contract and expanded source snapshot."""
+    revision = bundle['revision']
+    if bundle.get('operation') != 'revise' or not isinstance(revision, dict):
+        raise ValueError('A revision receipt belongs only to a revise request.')
+    if revision.get('schema') != 'openteams/cog-revision [0.1]':
+        raise ValueError('Unsupported revision receipt schema.')
+    contract = bundle['contract']
+    if revision['accepted_contract_sha256'] != contract_digest(contract):
+        raise ValueError('Revision accepted contract SHA-256 mismatch.')
+    files = [{'path': row['path'], 'content': row['content']} for row in bundle['materials']]
+    if not files or len({row['path'] for row in files}) != len(files):
+        raise ValueError('Revision needs one complete, unambiguous source snapshot.')
+    for row in bundle['materials']:
+        if not safe_path(row['path']) or not isinstance(row['content'], str):
+            raise ValueError('Revision source paths and content must be portable text.')
+        if 'sha256' in row and row['sha256'] != hashlib.sha256(row['content'].encode()).hexdigest():
+            raise ValueError('Revision source material SHA-256 mismatch.')
+    candidate = candidate_digest(contract, files)
+    if revision['candidate_sha256'] != candidate:
+        raise ValueError('Revision candidate SHA-256 mismatch.')
+    request, envelope = revision['review_request'], revision['review_envelope']
+    if request.get('operation') != 'review' or request.get('contract') != contract or sorted(request.get('files', []), key=lambda row: row['path']) != sorted(files, key=lambda row: row['path']):
+        raise ValueError('Review refers to a different candidate or accepted contract.')
+    if revision['review_sha256'] != contract_digest({'request': request, 'envelope': envelope}):
+        raise ValueError('Revision review SHA-256 mismatch.')
+    if envelope.get('envelope') != 1 or envelope.get('ok') is not True or envelope.get('error') or envelope.get('problems') or (envelope.get('cog') or {}).get('id') != 'openteams/cog-build-evaluator':
+        raise ValueError('Revision needs a clean evaluator review envelope.')
+    result = envelope['payload']
+    if result.get('classification') not in ('revise', 'insufficient_evidence') or result.get('abstained') is not False:
+        raise ValueError('Only revise or insufficient_evidence reviews can prepare revisions.')
+    criteria = {row['id'] for row in contract['acceptance_criteria']}
+    for evidence in request.get('evidence', []):
+        if evidence.get('candidate_sha256') != candidate or evidence.get('criterion_id') not in criteria:
+            raise ValueError('Review evidence refers to a different candidate or criterion.')
+    scope = revision['allowed_change_scope']
+    paths, ids = scope['paths'], scope['criterion_ids']
+    if not paths or len(set(paths)) != len(paths) or not all(safe_path(path) for path in paths):
+        raise ValueError('Revision needs explicit, unique allowed-change paths.')
+    if not ids or len(set(ids)) != len(ids) or not set(ids) <= criteria:
+        raise ValueError('Revision scope must name existing accepted criterion IDs.')
+    if any(finding.get('severity') != 'warning' and finding.get('path') not in paths for finding in result.get('findings', [])):
+        raise ValueError('Review findings fall outside the allowed-change paths.')
+    if any(assessment.get('criterion_id') not in criteria for assessment in result.get('assessments', [])):
+        raise ValueError('Review assessment names an unknown accepted criterion.')
+    return files
+
+
+def prepare_revision(author_request, author_envelope, review_request, review_envelope, allowed_change_scope):
+    """Deterministic handoff; receipt identities never come from model output."""
+    import cog_core
+    if author_envelope.get('envelope') != 1 or author_envelope.get('ok') is not True or author_envelope.get('error') or author_envelope.get('problems') or (author_envelope.get('cog') or {}).get('id') != 'openteams/cog-author':
+        raise ValueError('A clean author envelope is required.')
+    if cog_core.validate_input(author_request) or cog_core.validate_output(author_envelope.get('payload'), author_request):
+        raise ValueError('Original author request and source must pass packaged checks.')
+    payload = hydrate(author_envelope['payload'], author_request)
+    if payload.get('classification') != 'authored':
+        raise ValueError('Revision requires an authored source snapshot.')
+    files = payload['files']
+    contract = payload['contract']
+    allowed_change_scope = dict(allowed_change_scope)
+    allowed_change_scope.setdefault('criterion_ids', [row['id'] for row in contract['acceptance_criteria']])
+    feedback = list(author_request.get('feedback', []))
+    if author_request.get('revision'):
+        prior_review = json.dumps(author_request['revision']['review_envelope'].get('payload'), sort_keys=True, ensure_ascii=False)
+        # The previous round appends exactly one review. Keep original advisory
+        # context, not superseded review advice or the prior source as originals.
+        if feedback and feedback[-1] == prior_review:
+            feedback.pop()
+    else:
+        feedback.append(json.dumps({'original_materials': author_request.get('materials', [])}, sort_keys=True, ensure_ascii=False))
+    feedback.append(json.dumps(review_envelope.get('payload'), sort_keys=True, ensure_ascii=False))
+    result = {'operation': 'revise' , 'brief': author_request['brief'], 'contract': contract,
+              'contract_sha256': contract_digest(contract), 'identity': payload['smith_request'],
+              'kind': contract.get('kind', 'context'),
+              'materials': [{'path': row['path'], 'content': row['content'],
+                             'sha256': hashlib.sha256(row['content'].encode()).hexdigest()} for row in files],
+              'feedback': feedback,
+              'revision': {'schema': 'openteams/cog-revision [0.1]',
+                           'accepted_contract_sha256': contract_digest(contract),
+                           'candidate_sha256': candidate_digest(contract, files),
+                           'review_request': review_request, 'review_envelope': review_envelope,
+                           'review_sha256': contract_digest({'request': review_request, 'envelope': review_envelope}),
+                           'allowed_change_scope': allowed_change_scope}}
+    problems = cog_core.validate_input(result)
+    if problems:
+        raise ValueError('Revision request failed packaged checks: ' + json.dumps(problems))
+    return result
+
+
 def hydrate(parsed, bundle):
     """Expand explicit, hash-checked input references; never read local paths."""
     result = dict(parsed)
@@ -102,6 +197,11 @@ def check_schema(value):
 def check_input(bundle):
     out = contract_problems(bundle.get('contract'))
     contract = bundle.get('contract')
+    if 'revision' in bundle:
+        try:
+            validate_revision(bundle)
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
+            out.append(problem(str(exc)))
     if 'contract_sha256' in bundle and (not isinstance(contract, dict) or bundle['contract_sha256'] != contract_digest(contract)):
         out.append(problem('Input contract SHA-256 mismatch.'))
     if isinstance(contract, dict) and bundle.get('kind', contract.get('kind', 'context')) != contract.get('kind', 'context'):
@@ -164,6 +264,15 @@ def check_output(parsed, bundle):
     rows = parsed.get('files')
     if not isinstance(rows, list):
         return out + [problem('files must be an array.')]
+    if 'revision' in bundle:
+        try:
+            previous = {row['path']: row['content'] for row in validate_revision(bundle)}
+            current = {row['path']: row['content'] for row in rows}
+            changed = {path for path in previous.keys() | current.keys() if previous.get(path) != current.get(path)}
+            if not changed <= set(bundle['revision']['allowed_change_scope']['paths']):
+                out.append(problem('Revision changed files outside its allowed-change scope: ' + ', '.join(sorted(changed - set(bundle['revision']['allowed_change_scope']['paths'])))))
+        except (ValueError, KeyError, TypeError, AttributeError) as exc:
+            out.append(problem(str(exc)))
     files = {}
     code = isinstance(contract, dict) and contract.get('kind') == 'code'
     required = CODE_FILES if code else REQUIRED_FILES
