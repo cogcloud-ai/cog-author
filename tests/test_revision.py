@@ -116,3 +116,21 @@ class RevisionTests(unittest.TestCase):
             result=subprocess.run([sys.executable,str(ROOT/'scripts/prepare_revision.py'),'--request',str(path)],capture_output=True,text=True)
             self.assertEqual(result.returncode,1);self.assertEqual(result.stderr,'')
             self.assertEqual(json.loads(result.stdout)['error']['code'],'invalid-revision')
+
+    def test_chained_revisions_keep_original_context_once_and_only_current_review(self):
+        self.original['materials']=[{'path':'src/task_logic.py','content':'Caller original'}]
+        self.original['feedback']=['Caller advice']
+        first=self.prepare()
+        second_review=copy.deepcopy(self.review);second_review['payload']['reason']='Current review only'
+        second=logic.prepare_revision(first,self.author,self.review_request,second_review,self.scope)
+        self.assertEqual(second['feedback'][:-1],first['feedback'][:-1])
+        self.assertIn('Current review only',second['feedback'][-1])
+        self.assertEqual(sum('original_materials' in f for f in second['feedback']),1)
+        self.assertNotIn('Cases have not been run.',''.join(second['feedback']))
+        self.assertEqual(len(second['feedback']),len(first['feedback']))
+
+    def test_unknown_out_of_scope_severity_fails_closed(self):
+        for severity in ['Error','critical',None]:
+            self.review['payload']['findings']=[{'path':'COG.md','severity':severity}]
+            with self.assertRaisesRegex(ValueError,'outside'):
+                self.prepare()

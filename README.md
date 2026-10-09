@@ -186,3 +186,9 @@ those paths do not prevent preparation. Error findings outside the scope refuse
 preparation; start a new build with a reviewed wider scope. Original supplied
 materials and feedback are retained in feedback alongside the prior source
 snapshot, including materials whose paths overlap generated source.
+
+Retained original materials and feedback are advisory context, outside the
+revision receipt digests. Chained revisions keep that original context once and
+replace the prior review advice with the current review; previous candidate
+source remains only in the current source snapshot. Unknown finding severities
+fail closed for paths outside the repair scope.
